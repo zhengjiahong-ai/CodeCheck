@@ -1,0 +1,27 @@
+# CodeCheck Project Configuration
+version: "1.0"
+
+llm:
+  provider: deepseek
+  model: deepseek-v4-pro
+  base_url: https://api.deepseek.com
+
+review:
+  max_fix_rounds: 5
+  diff_only: false
+  exclude_paths:
+    - "node_modules/"
+    - "*.min.js"
+    - "vendor/"
+    - "build/"
+
+test:
+  command: "pytest --tb=short"
+  timeout_seconds: 180
+
+rules:
+  path: ".codecheck/rules.yaml"
+
+memory:
+  db_path: "~/.codecheck/memory.db"
+  vector_path: "~/.codecheck/vectors/"

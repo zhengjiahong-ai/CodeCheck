@@ -1,0 +1,6 @@
+# Invalid config: max_fix_rounds is a string, not an int
+version: "1.0"
+
+review:
+  max_fix_rounds: "not-a-number"
+  diff_only: "yes"  # should be boolean

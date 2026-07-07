@@ -51,6 +51,9 @@ packages = ["src/codecheck"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["--tb=short", "--strict-markers", "-v"]
+filterwarnings = [
+    "ignore:cannot collect test class.*because it has a __init__:pytest.PytestCollectionWarning",
+]
 
 [tool.ruff]
 target-version = "py310"
