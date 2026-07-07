@@ -148,3 +148,18 @@
 | **人工干预** | 无 — 一次通过，18/18 tests passed |
 | **验证结果** | 183 passed, 5 skipped (18 new T7 tests) |
 | **Commit** | `69fe8e4` |
+
+---
+
+## 2026-07-07 · T8: 记忆系统
+
+| 字段 | 内容 |
+|------|------|
+| **时间** | 2026-07-07 |
+| **Task 编号** | T8 |
+| **触发技能** | 直接实现（使用 git worktree 隔离） |
+| **涉及文件** | `store.py` (MemoryStore + ReviewRecord + FalsePositiveRecord), `sqlite_store.py` (SQLite 3表+4索引+WAL), `tests/memory/test_sqlite_store.py` (11 用例) |
+| **AI 输出** | SQLite 记忆系统：review_history/false_positives/fix_history 三表，文件过滤/限制条数/误报查重/上下文管理器 |
+| **人工干预** | 修复 `test_empty_db_path_creates_default`：`Path.expanduser()` 不经过 `os.path.expanduser`，改用 `monkeypatch.setenv("HOME", ...)` |
+| **验证结果** | 194 passed, 5 skipped (11 new T8 tests) |
+| **Commit** | `53bd72c` |
