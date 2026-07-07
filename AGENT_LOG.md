@@ -103,3 +103,18 @@
 | **人工干预** | 无 — 一次通过，29/29 tests passed |
 | **验证结果** | 86 passed, 5 skipped (29 new T4 tests + 28 T1/T2 + 29 T3) |
 | **Commit** | `442ed8a` |
+
+---
+
+## 2026-07-07 · T5: 工具系统
+
+| 字段 | 内容 |
+|------|------|
+| **时间** | 2026-07-07 |
+| **Task 编号** | T5 |
+| **触发技能** | 直接实现（使用 git worktree 隔离） |
+| **涉及文件** | `base.py` (Tool + ToolResult), `registry.py` (ToolRegistry), `file_tools.py` (ReadFile + WriteFile), `shell_tools.py` (RunShell + RunTest + RunLint), `git_tools.py` (GitDiff + GitLog + GitBlame), 4 个测试文件 |
+| **AI 输出** | 8 个工具类 + 注册中心 + OpenAI function calling schema 生成 |
+| **人工干预** | 修复 `test_run_failing_command`：error message 是 "exited with code" 而非 "exit code" |
+| **验证结果** | 127 passed, 5 skipped (41 new T5 tests + 86 existing) |
+| **Commit** | `33957ba` |
