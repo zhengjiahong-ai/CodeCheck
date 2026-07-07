@@ -57,7 +57,8 @@ CodeCheck
 ├── 模块 D：反馈闭环（Feedback Loop）
 ├── 模块 E：治理护栏（Governance Guardrails）
 ├── 模块 F：记忆系统（Memory System）
-└── 模块 G：配置与分发（Config & Distribution）
+├── 模块 G：配置与分发（Config & Distribution）
+└── 模块 H：LLM 抽象层（LLM Abstraction Layer）
 ```
 
 ### 3.2 模块 A：主循环（Agent Loop）
@@ -396,6 +397,134 @@ memory:
 - CLI：`codecheck review [path] [--diff] [--fix] [--max-rounds N]`
 - Git hook：`.git/hooks/pre-commit` 中调用 `codecheck review --diff --staged`
 
+### 3.9 模块 H：LLM 抽象层（LLM Abstraction Layer）
+
+**职责**：提供可注入 mock 的 LLM Provider 抽象，统一 LLM 调用接口、工具调用解析、Token 计数、异常处理。这是满足 §A.4 (C) "移除 LLM 后机制仍可用单测验证"的核心基础。
+
+#### 3.9.1 中间协议（IR）
+
+所有 LLM 响应统一转换为内部中间表示，不依赖任何供应商格式：
+
+```python
+@dataclass
+class ToolCall:
+    """工具调用中间表示"""
+    id: str
+    name: str
+    arguments: dict  # JSON 解析后的 dict
+
+@dataclass
+class LLMResponse:
+    """LLM 响应中间表示"""
+    content: str | None       # 文本内容
+    tool_calls: list[ToolCall] = field(default_factory=list)
+    finish_reason: str = "stop"  # "stop" | "tool_calls" | "length"
+    usage: dict | None = None    # {"prompt_tokens": N, "completion_tokens": N}
+```
+
+- `DeepSeekProvider` 负责将 OpenAI 格式的 `tool_calls` 转换为此 IR
+- `MockProvider` 直接产出此 IR
+- 参数类型校验由 T5（工具系统）负责——`ToolRegistry.execute()` 在调用前校验参数
+
+#### 3.9.2 Provider 抽象
+
+```python
+class LLMProvider(ABC):
+    """LLM Provider 抽象基类"""
+
+    @abstractmethod
+    def chat(self, messages: list[dict], tools: list[dict] | None = None) -> LLMResponse:
+        """发送消息并返回响应"""
+        ...
+
+    def count_tokens(self, text: str) -> int:
+        """估算 Token 数，默认使用 tiktoken cl100k_base"""
+        ...
+```
+
+- `DeepSeekProvider` 构造函数接受具体参数（`api_key`, `base_url`, `model`），不依赖 T3 的 `CodeCheckConfig` 对象
+- API Key 获取优先级：构造函数参数 → 环境变量 `CODE_CHECK_API_KEY` → T4 的 CredentialStore（T4 完成后由 CLI 层传入）
+- Token 计数使用 `tiktoken` + `cl100k_base` 编码估算，目的是防止上下文溢出而非精确计费
+
+#### 3.9.3 MockProvider 规则驱动
+
+`MockProvider` 支持三级匹配，用于模拟 LLM 的文本响应和工具调用响应：
+
+```python
+@dataclass
+class MockRule:
+    # 触发条件（三选一或组合，None 表示不检查该条件）
+    keyword: str | None = None    # 输入包含关键词 → 匹配
+    regex: str | None = None      # 输入匹配正则 → 匹配
+    exact: str | None = None      # 输入完全等于 → 匹配
+
+    # 响应
+    response_content: str | None = None
+    tool_calls: list[ToolCall] | None = None
+    finish_reason: str = "stop"
+
+    # 行为
+    consume: bool = True          # 匹配后是否消耗该规则（仅触发一次）
+    delay: int = 0                # 模拟延迟（毫秒）
+    raise_error: LLMProviderError | None = None  # 模拟异常
+```
+
+**典型用法**：
+```python
+# 模拟审查结论
+MockRule(keyword="SELECT", response_content='[{"rule_id":"sql-string-concat",...}]')
+
+# 模拟工具调用（让主循环测试覆盖完整流程）
+MockRule(exact="read_file:src/auth.py",
+    tool_calls=[ToolCall(id="1", name="read_file", arguments={"path":"src/auth.py"})],
+    finish_reason="tool_calls")
+
+# 模拟修复
+MockRule(regex=r"修复.*sql.*注入",
+    response_content="old_string: '...', new_string: 'param_query'")
+
+# 默认 fallback（无规则匹配时，consume=False 保证可重复使用）
+MockRule(keyword=None, response_content="No issues found.", consume=False)
+```
+
+#### 3.9.4 异常层次
+
+```python
+class LLMProviderError(Exception):
+    """LLM Provider 基础异常"""
+    pass
+
+class LLMAuthenticationError(LLMProviderError):
+    """认证失败（API Key 无效/过期）"""
+    pass
+
+class LLMRateLimitError(LLMProviderError):
+    """速率限制（429 / rate limit exceeded）"""
+    pass
+
+class LLMInvalidRequestError(LLMProviderError):
+    """请求参数错误（如不支持的模型）"""
+    pass
+
+class LLMTimeoutError(LLMProviderError):
+    """请求超时"""
+    pass
+
+class LLMContextOverflowError(LLMProviderError):
+    """上下文窗口溢出"""
+    pass
+```
+
+`DeepSeekProvider` 负责将 OpenAI SDK 的异常映射为这些内部异常。`MockProvider` 通过 `MockRule.raise_error` 模拟异常。
+
+**边界条件**：
+- 无 API Key 且无环境变量 → 抛出 `LLMAuthenticationError`
+- API 超时 → 主循环层重试 2 次
+
+**错误处理**：
+- API 返回非 200 → 解析错误码，映射为对应异常子类
+- 网络错误 → 抛出 `LLMProviderError` 并附带原始异常信息
+
 ---
 
 ## 四、非功能性需求
@@ -551,7 +680,7 @@ memory:
 | DeepSeek API | LLM 推理（审查分析、修复生成） | 通过 mock 抽象层可替换为其他供应商 |
 | ChromaDB | 向量存储与语义检索 | 本地运行，无需外部服务 |
 | Git | 版本控制（diff、log、blame） | 系统级依赖 |
-| Python 3.10+ | 运行环境 | — |
+| Python 3.12（开发基准） | 运行环境 | `requires-python >= 3.10` 向下兼容 |
 
 ---
 
@@ -676,9 +805,11 @@ collection: fix_strategies
 
 | 选项 | 选择 | 理由 |
 |------|------|------|
-| 语言 | Python 3.10+ | 生态成熟（cryptography、ChromaDB、click、pytest）；LLM SDK 支持好；开发效率高 |
+| 语言 | Python 3.12（开发基准） | 生态成熟；`requires-python >= 3.10` 向下兼容；3.12 支持 `list[str]`、`str \| None` 等现代类型提示 |
 | LLM 供应商 | DeepSeek | 用户已配置的供应商；API 兼容 OpenAI SDK |
-| LLM 抽象层 | 自定义 `LLMProvider` 抽象类 | 满足 mock 注入要求；可替换供应商 |
+| LLM 抽象层 | 自定义 `LLMProvider` 抽象类 + 中间协议 IR | 满足 mock 注入要求；`ToolCall`/`LLMResponse` 中间表示不依赖供应商格式；`MockProvider` 支持 keyword/regex/exact 三级规则匹配 |
+| Token 计数 | tiktoken + cl100k_base | 估算方案，防止上下文溢出；DeepSeek tokenizer 行为接近 OpenAI |
+| LLM 异常 | 自定义 5 类异常（`LLMProviderError` 子类） | 解耦供应商异常；`DeepSeekProvider` 负责映射；`MockProvider` 可模拟异常 |
 | 规则引擎 | 自定义（re + YAML） | 确定性规则需自己实现正则匹配和 AST 分析 |
 | 向量数据库 | ChromaDB | 轻量、本地运行、Python 原生支持、无需外部服务 |
 | 结构化存储 | SQLite | 零配置、单文件、Python 标准库支持 |
