@@ -88,3 +88,18 @@
 | **人工干预** | 1) 修复 `test_load_valid_config`：fixture 文件名为 `valid_config.yaml` 而非 `.codecheck.yaml`，`load_config()` 只搜索 `.codecheck.yaml`，改用 tmp_path 复制内容；2) 重命名 `TestConfig` → `TestRunnerConfig` 避免 pytest 采集警告；3) 添加 `filterwarnings` 抑制 dataclass 采集警告 |
 | **验证结果** | 57 passed, 5 skipped (29 new T3 tests + 28 existing T1/T2 tests) |
 | **Commit** | `aea61ed` |
+
+---
+
+## 2026-07-07 · T4: 凭据安全存储
+
+| 字段 | 内容 |
+|------|------|
+| **时间** | 2026-07-07 |
+| **Task 编号** | T4 |
+| **触发技能** | 直接实现（使用 git worktree 隔离） |
+| **涉及文件** | `src/codecheck/credentials/store.py` (CredentialStore + get_api_key), `src/codecheck/credentials/prompt.py` (交互式录入), `src/codecheck/credentials/__init__.py`, `tests/credentials/test_store.py` (29 用例) |
+| **AI 输出** | 完整凭据安全存储：Fernet AES-128-CBC + HMAC 加密, PBKDF2-HMAC-SHA256 密钥派生, 600 文件权限, 交互式引导录入, 环境变量 fallback |
+| **人工干预** | 无 — 一次通过，29/29 tests passed |
+| **验证结果** | 86 passed, 5 skipped (29 new T4 tests + 28 T1/T2 + 29 T3) |
+| **Commit** | `442ed8a` |
