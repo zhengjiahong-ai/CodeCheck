@@ -1,0 +1,70 @@
+# CodeCheck 内置审查规则
+
+rules:
+  # ----- 安全类 -----
+  - id: "no-hardcoded-secret"
+    severity: critical
+    type: deterministic
+    pattern: '(api_key|secret|password|token)\s*=\s*[''"][^''""]+[''"]]'
+    message: "禁止硬编码密钥/密码/Token"
+    category: security
+
+  - id: "sql-string-concat"
+    severity: critical
+    type: deterministic
+    pattern: "('f'|['\"])\s*(SELECT|INSERT|UPDATE|DELETE)\s"
+    message: "检测到疑似 SQL 字符串拼接，可能导致 SQL 注入风险"
+    category: security
+
+  - id: "dangerous-eval"
+    severity: critical
+    type: deterministic
+    pattern: '\b(eval|exec)\s*\('
+    message: "禁止使用 eval()/exec()，存在代码注入风险"
+    category: security
+
+  # ----- 风格类 -----
+  - id: "no-bare-except"
+    severity: warning
+    type: deterministic
+    pattern: 'except\s*:'
+    message: "避免裸 except，请指定具体异常类型"
+    category: style
+
+  - id: "no-debug-print"
+    severity: warning
+    type: deterministic
+    pattern: '\bprint\s*\('
+    message: "生产代码中应移除调试用的 print() 语句"
+    category: style
+
+  # ----- LLM 辅助规则 -----
+  - id: "sql-injection-risk"
+    severity: critical
+    type: llm-assisted
+    description: "检测 SQL 注入风险，如字符串拼接构造 SQL 语句"
+    prompt: |
+      检查以下代码是否存在 SQL 注入风险。
+      关注：字符串拼接构造 SQL、未使用参数化查询、动态表名/列名未经校验。
+      如果发现问题，以 JSON 格式返回：{"issues": [{"line": <line_number>, "severity": "critical", "message": "<description>"}]}
+      如果无问题，返回：{"issues": []}
+
+  - id: "unhandled-error"
+    severity: warning
+    type: llm-assisted
+    description: "检测未处理的异常/错误路径"
+    prompt: |
+      检查以下代码是否存在未处理的错误路径。
+      关注：调用可能失败的函数但未检查返回值、空值未判空直接使用、资源未正确释放。
+      如果发现问题，以 JSON 格式返回：{"issues": [{"line": <line_number>, "severity": "warning", "message": "<description>"}]}
+      如果无问题，返回：{"issues": []}
+
+  - id: "logic-error"
+    severity: warning
+    type: llm-assisted
+    description: "检测潜在的逻辑错误"
+    prompt: |
+      检查以下代码是否存在潜在的逻辑错误。
+      关注：条件判断恒真/恒假、off-by-one 错误、变量未初始化、类型不匹配。
+      如果发现问题，以 JSON 格式返回：{"issues": [{"line": <line_number>, "severity": "warning", "message": "<description>"}]}
+      如果无问题，返回：{"issues": []}
