@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "codecheck"
+version = "0.1.0"
+description = "AI-powered code review harness — review, fix, verify, repeat."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [
+    { name = "CodeCheck Team" }
+]
+keywords = ["code-review", "ai", "llm", "harness", "agent"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "click>=8.1",
+    "openai>=1.0",
+    "pyyaml>=6.0",
+    "tiktoken>=0.5",
+    "chromadb>=0.4",
+    "cryptography>=41.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.12",
+    "ruff>=0.3",
+]
+
+[project.scripts]
+codecheck = "codecheck.cli.main:main"
+
+[project.urls]
+Homepage = "https://github.com/nju-ai4se/codecheck"
+Repository = "https://github.com/nju-ai4se/codecheck"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/codecheck"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--tb=short", "--strict-markers", "-v"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
+ignore = ["E501"]
