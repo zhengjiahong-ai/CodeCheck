@@ -72,4 +72,19 @@
 | **AI 输出** | 3-job CI（unit-test + lint + docker-build），多阶段 Dockerfile，完善的 .dockerignore |
 | **人工干预** | 无 |
 | **验证结果** | CI 配置语法正确，Dockerfile 结构合理（待项目完成后验证 docker build） |
-| **Commit** | 待提交 |
+| **Commit** | `5fa6ebc`, `80c566b`, `e402b65`
+
+---
+
+## 2026-07-07 · T3: 配置系统
+
+| 字段 | 内容 |
+|------|------|
+| **时间** | 2026-07-07 |
+| **Task 编号** | T3 |
+| **触发技能** | 直接实现（使用 git worktree 隔离） |
+| **涉及文件** | `src/codecheck/config/schema.py` (6 dataclass), `src/codecheck/config/loader.py` (查找/解析/验证/CLI覆盖), `src/codecheck/config/__init__.py`, `tests/config/test_loader.py` (29 用例), `tests/config/fixtures/valid_config.yaml`, `tests/config/fixtures/invalid_types.yaml` |
+| **AI 输出** | 完整的配置系统：向上查找 .codecheck.yaml、6 个 dataclass 配置结构、类型验证（string/int/bool/list）、CLI 覆盖合并 |
+| **人工干预** | 1) 修复 `test_load_valid_config`：fixture 文件名为 `valid_config.yaml` 而非 `.codecheck.yaml`，`load_config()` 只搜索 `.codecheck.yaml`，改用 tmp_path 复制内容；2) 重命名 `TestConfig` → `TestRunnerConfig` 避免 pytest 采集警告；3) 添加 `filterwarnings` 抑制 dataclass 采集警告 |
+| **验证结果** | 57 passed, 5 skipped (29 new T3 tests + 28 existing T1/T2 tests) |
+| **Commit** | `aea61ed` |
