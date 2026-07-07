@@ -118,3 +118,18 @@
 | **人工干预** | 修复 `test_run_failing_command`：error message 是 "exited with code" 而非 "exit code" |
 | **验证结果** | 127 passed, 5 skipped (41 new T5 tests + 86 existing) |
 | **Commit** | `33957ba` |
+
+---
+
+## 2026-07-07 · T6: 规则引擎
+
+| 字段 | 内容 |
+|------|------|
+| **时间** | 2026-07-07 |
+| **Task 编号** | T6 |
+| **触发技能** | 直接实现（使用 git worktree 隔离） |
+| **涉及文件** | `models.py` (Rule/Issue/Severity), `loader.py` (YAML加载+验证), `deterministic.py` (正则匹配), `llm_assisted.py` (LLM语义匹配+JSON提取), `engine.py` (RuleEngine 5阶段流水线), 3 个测试文件 |
+| **AI 输出** | 完整混合规则引擎：确定性逐行正则匹配、LLM辅助语义分析（3种JSON提取fallback）、去重合并（dual_confirmed标记）、误报过滤、严重度排序 |
+| **人工干预** | 1) 修复 `test_llm_finds_issues`：LLM matcher 对每个 rule 独立调用 LLM，2 个 rule 产生 2 个 issue 而非 1 个；2) 修复 6 个 B904/B007 ruff lint 问题 (from e/from None, _location) |
+| **验证结果** | 163 passed, 5 skipped (36 new T6 tests) |
+| **Commit** | `3d3a89d` |
