@@ -11,7 +11,6 @@ import pytest
 from codecheck.llm.deepseek_provider import DeepSeekProvider
 from codecheck.llm.exceptions import LLMAuthenticationError
 
-
 # Skip all tests in this module unless CODE_CHECK_TEST_LIVE=1
 pytestmark = pytest.mark.skipif(
     os.getenv("CODE_CHECK_TEST_LIVE") != "1",

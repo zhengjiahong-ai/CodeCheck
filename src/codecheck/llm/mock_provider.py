@@ -2,7 +2,7 @@
 
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from codecheck.llm.exceptions import LLMProviderError
 from codecheck.llm.provider import LLMProvider, LLMResponse, ToolCall

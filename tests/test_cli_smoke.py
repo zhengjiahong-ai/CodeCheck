@@ -1,6 +1,7 @@
 """Smoke tests for CLI entry point."""
 
 from click.testing import CliRunner
+
 from codecheck.cli.main import main
 
 
