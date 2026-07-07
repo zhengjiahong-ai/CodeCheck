@@ -133,3 +133,18 @@
 | **人工干预** | 1) 修复 `test_llm_finds_issues`：LLM matcher 对每个 rule 独立调用 LLM，2 个 rule 产生 2 个 issue 而非 1 个；2) 修复 6 个 B904/B007 ruff lint 问题 (from e/from None, _location) |
 | **验证结果** | 163 passed, 5 skipped (36 new T6 tests) |
 | **Commit** | `3d3a89d` |
+
+---
+
+## 2026-07-07 · T7: 治理护栏
+
+| 字段 | 内容 |
+|------|------|
+| **时间** | 2026-07-07 |
+| **Task 编号** | T7 |
+| **触发技能** | 直接实现（使用 git worktree 隔离） |
+| **涉及文件** | `src/codecheck/guardrails/guard.py` (PermissionLevel/Action/GuardResult/DEFAULT_PERMISSIONS/guardrail), `tests/guardrails/test_guard.py` (18 用例) |
+| **AI 输出** | 确定性权限矩阵：13 个工具分三级 (AUTO/CONFIRM/FORBIDDEN)，白名单原则，guardrail() 纯函数 |
+| **人工干预** | 无 — 一次通过，18/18 tests passed |
+| **验证结果** | 183 passed, 5 skipped (18 new T7 tests) |
+| **Commit** | `69fe8e4` |
