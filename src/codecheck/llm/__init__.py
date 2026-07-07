@@ -5,7 +5,7 @@ Provides a vendor-neutral interface for LLM calls, supporting:
 - Mock (rule-driven provider for deterministic unit testing)
 """
 
-from codecheck.llm.provider import LLMProvider, LLMResponse, ToolCall
+from codecheck.llm.deepseek_provider import DeepSeekProvider
 from codecheck.llm.exceptions import (
     LLMAuthenticationError,
     LLMContextOverflowError,
@@ -14,8 +14,8 @@ from codecheck.llm.exceptions import (
     LLMRateLimitError,
     LLMTimeoutError,
 )
-from codecheck.llm.deepseek_provider import DeepSeekProvider
 from codecheck.llm.mock_provider import MockProvider, MockRule
+from codecheck.llm.provider import LLMProvider, LLMResponse, ToolCall
 
 __all__ = [
     "LLMProvider",
