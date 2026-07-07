@@ -38,27 +38,58 @@ Phase 4: Distribution & CI（依赖 T9-T12）
 
 ### T1: 项目脚手架与依赖管理
 
-**目标**：初始化项目结构，配置开发依赖，建立可运行的空壳。
+**目标**：初始化项目结构，配置开发依赖，建立可运行的空壳，定义 Click 命令树（函数体 pass）。
 
 **涉及文件**：
-- `pyproject.toml` — 项目元数据与依赖声明
+- `pyproject.toml` — 项目元数据与依赖声明（`requires-python = ">=3.10"`，开发基准 3.12）
 - `src/codecheck/__init__.py` — 包入口
 - `src/codecheck/__main__.py` — `python -m codecheck` 入口
+- `src/codecheck/cli/main.py` — Click 命令树（review / config / install-hook / uninstall-hook，函数体 pass）
 - `tests/__init__.py` — 测试包
+- `tests/test_cli_smoke.py` — 冒烟测试（`--help` 输出）
 - `Makefile` — `make test` / `make lint` 等快捷命令
-- `.codecheck/rules.yaml` — 内置默认规则
+- `.codecheck/rules.yaml` — 内置 5 条确定性规则（仅 YAML，不含 Python 处理逻辑）
 
 **预期实现要点**：
-- 使用 `setuptools` 或 `hatchling` 构建
-- 依赖：`click`, `openai`（DeepSeek 兼容）, `chromadb`, `pyyaml`, `cryptography`, `pytest`, `pytest-mock`
-- `make test` 运行 `pytest`，`make lint` 运行 `ruff`
-- 内置至少 5 条确定性规则（no-hardcoded-secret, no-bare-except 等）
+- 使用 `hatchling` 构建
+- 依赖：`click`, `openai`（DeepSeek 兼容）, `chromadb`, `pyyaml`, `cryptography`, `tiktoken`, `pytest`, `pytest-mock`, `ruff`
+- `make test` 运行 `pytest`，`make lint` 运行 `ruff check`
+- Click 命令树在 T1 就定死，后续 task 只填充函数体：
+  ```python
+  @click.group()
+  def main(): ...
+  @main.command()
+  @click.argument("path", default=".")
+  @click.option("--diff", is_flag=True)
+  @click.option("--fix", is_flag=True)
+  @click.option("--max-rounds", type=int)
+  @click.option("--output", type=click.Path())
+  def review(path, diff, fix, max_rounds, output): pass  # T11 实现
+  @main.command()
+  @click.option("--status", is_flag=True)
+  @click.option("--set-key", is_flag=True)
+  @click.option("--clear-key", is_flag=True)
+  def config(status, set_key, clear_key): pass  # T4 + T11 实现
+  @main.command()
+  def install_hook(): pass  # T12 实现
+  @main.command()
+  def uninstall_hook(): pass  # T12 实现
+  ```
+- 内置 5 条确定性规则（仅 YAML 定义，T6 才写匹配逻辑）：
+  | # | 规则 ID | 类别 | 正则 pattern |
+  |---|---------|------|-------------|
+  | 1 | `no-hardcoded-secret` | security | `(api_key\|secret\|password\|token)\s*=\s*['"][^'"]+['"]` |
+  | 2 | `no-bare-except` | style | `except\s*:` |
+  | 3 | `no-debug-print` | style | `\bprint\s*\(` |
+  | 4 | `sql-string-concat` | security | `('f'\|['"])\s*(SELECT\|INSERT\|UPDATE\|DELETE)\s` |
+  | 5 | `dangerous-eval` | security | `\b(eval\|exec)\s*\(` |
 
 **验证步骤**：
 1. `pip install -e .` 成功
-2. `python -m codecheck --help` 显示帮助信息（即使功能未实现）
-3. `make test` 运行通过（初始占位测试）
+2. `python -m codecheck --help` 显示帮助信息，包含 review / config / install-hook / uninstall-hook 子命令
+3. `make test` 运行通过（冒烟测试：CLI 可导入，`--help` 输出非空）
 4. `make lint` 无错误
+5. `.codecheck/rules.yaml` 存在且 YAML 格式合法
 
 **依赖**：无
 **可并行**：与 T2, T3, T4 并行
@@ -67,28 +98,76 @@ Phase 4: Distribution & CI（依赖 T9-T12）
 
 ### T2: LLM 抽象层
 
-**目标**：实现可注入 mock 的 LLM Provider 抽象，支持 DeepSeek 真实调用和 Mock 规则驱动调用。
+**目标**：实现可注入 mock 的 LLM Provider 抽象，支持 DeepSeek 真实调用和 Mock 规则驱动调用。定义中间协议 IR 和异常层次。
 
 **涉及文件**：
 - `src/codecheck/llm/__init__.py`
-- `src/codecheck/llm/provider.py` — `LLMProvider` 抽象基类
+- `src/codecheck/llm/provider.py` — `LLMProvider` 抽象基类 + `LLMResponse`/`ToolCall` 中间协议数据类
+- `src/codecheck/llm/exceptions.py` — 异常层次（5 个子类）
 - `src/codecheck/llm/deepseek_provider.py` — DeepSeek 真实实现
-- `src/codecheck/llm/mock_provider.py` — Mock 规则驱动实现
-- `tests/llm/test_provider.py` — Mock provider 单元测试
-- `tests/llm/test_deepseek.py` — DeepSeek provider 集成测试（可选运行）
+- `src/codecheck/llm/mock_provider.py` — Mock 规则驱动实现（`MockRule` + `MockProvider`）
+- `tests/llm/test_provider.py` — MockProvider 单元测试
+- `tests/llm/test_deepseek.py` — DeepSeekProvider 集成测试（仅 `CODE_CHECK_TEST_LIVE=1` 时运行）
 
 **预期实现要点**：
-- `LLMProvider` 抽象类定义 `chat(messages, tools?) -> LLMResponse` 接口
-- `LLMResponse` 包含 `content: str`, `tool_calls: list[ToolCall]`, `finish_reason: str`
-- `DeepSeekProvider` 封装 OpenAI SDK，指向 DeepSeek endpoint
-- `MockProvider` 按规则匹配：`MockRule(input_pattern, response_content, tool_calls?)`，按注册顺序匹配，支持默认 fallback
-- 支持上下文窗口管理（token 计数，超出时裁剪早期消息）
+
+1. **中间协议 IR**（不依赖任何供应商格式）：
+   ```python
+   @dataclass
+   class ToolCall:
+       id: str
+       name: str
+       arguments: dict  # JSON 解析后的 dict，参数类型校验由 T5 负责
+
+   @dataclass
+   class LLMResponse:
+       content: str | None
+       tool_calls: list[ToolCall] = field(default_factory=list)
+       finish_reason: str = "stop"  # "stop" | "tool_calls" | "length"
+       usage: dict | None = None
+   ```
+
+2. **Provider 抽象**：
+   - `LLMProvider` 抽象类定义 `chat(messages, tools?) -> LLMResponse` 接口
+   - `count_tokens(text: str) -> int` 默认使用 `tiktoken` + `cl100k_base` 估算
+   - `DeepSeekProvider.__init__` 接受具体参数（`api_key`, `base_url`, `model`），不依赖 T3 的 `CodeCheckConfig`
+   - API Key 获取优先级：构造函数参数 → 环境变量 `CODE_CHECK_API_KEY`
+
+3. **MockProvider 三级匹配**：
+   ```python
+   @dataclass
+   class MockRule:
+       keyword: str | None = None    # 输入包含关键词
+       regex: str | None = None      # 输入匹配正则
+       exact: str | None = None      # 输入完全等于
+       response_content: str | None = None
+       tool_calls: list[ToolCall] | None = None  # 模拟工具调用
+       finish_reason: str = "stop"
+       consume: bool = True          # 匹配后消耗
+       delay: int = 0                # 模拟延迟（ms）
+       raise_error: LLMProviderError | None = None  # 模拟异常
+   ```
+   按注册顺序匹配，支持默认 fallback（`keyword=None`, `consume=False`）。
+
+4. **异常层次**（5 个子类）：
+   - `LLMProviderError`（基础）
+   - `LLMAuthenticationError`（认证失败）
+   - `LLMRateLimitError`（429）
+   - `LLMInvalidRequestError`（参数错误）
+   - `LLMTimeoutError`（超时）
+   - `LLMContextOverflowError`（上下文溢出）
+   - `DeepSeekProvider` 负责将 OpenAI SDK 异常映射为这些内部异常
 
 **验证步骤**：
-1. `MockProvider` 注册规则 "包含 'SQL' → 返回 '发现 SQL 注入风险'"，传入包含 SQL 的代码，断言返回预期响应
-2. `MockProvider` 无规则匹配时返回默认响应
-3. `DeepSeekProvider` 通过环境变量 `CODE_CHECK_TEST_LIVE=1` 控制是否运行真实测试
-4. Token 计数：传入超长消息，验证早期消息被裁剪
+1. MockProvider keyword 匹配：注册 `MockRule(keyword="SQL", response_content="注入风险")` → 传入含 SQL 的代码 → 断言返回预期响应
+2. MockProvider 工具调用：注册 `MockRule(exact="read_file:src/auth.py", tool_calls=[ToolCall(...)], finish_reason="tool_calls")` → 断言返回 tool_calls
+3. MockProvider 正则匹配：注册 `MockRule(regex=r"修复.*sql", response_content="修复方案")` → 传入匹配文本 → 断言返回修复方案
+4. MockProvider 异常模拟：注册 `MockRule(keyword="timeout", raise_error=LLMTimeoutError())` → 断言抛出异常
+5. MockProvider 无规则匹配 → 返回默认 fallback 响应
+6. MockProvider 消费规则（`consume=True`）→ 第二次相同输入不再匹配该规则
+7. Token 计数：传入超长消息 → 验证 `count_tokens()` 返回合理值 > 0
+8. LLMResponse 序列化 → 验证 IR 不依赖任何供应商格式
+9. DeepSeekProvider 集成测试：`CODE_CHECK_TEST_LIVE=1` 时验证真实 API 调用正常
 
 **依赖**：T1
 **可并行**：与 T3, T4 并行
