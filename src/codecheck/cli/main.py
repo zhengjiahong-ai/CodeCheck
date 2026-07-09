@@ -25,8 +25,16 @@ def review(path, diff, fix, max_rounds, output):
     Scans source files for issues using deterministic rules and LLM analysis.
     With --fix, automatically repairs issues and verifies with test suite.
     """
-    # T11 实现
-    pass
+    from codecheck.cli.review import review_impl
+
+    exit_code = review_impl(
+        path=path,
+        diff=diff,
+        fix=fix,
+        max_rounds=max_rounds,
+        output=output,
+    )
+    raise SystemExit(exit_code)
 
 
 @main.command()
@@ -38,8 +46,9 @@ def config(status, set_key, clear_key):
 
     Store API keys securely using encrypted storage.
     """
-    # T4 + T11 实现
-    pass
+    from codecheck.cli.config_cmd import config as config_cmd
+
+    config_cmd(status=status, set_key=set_key, clear_key=clear_key)
 
 
 @main.command()

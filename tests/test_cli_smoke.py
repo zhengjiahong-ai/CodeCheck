@@ -48,6 +48,8 @@ def test_config_help():
 
 def test_review_empty_dir():
     """Verify review on empty path returns without crashing."""
+    import tempfile
     runner = CliRunner()
-    result = runner.invoke(main, ["review", "."])
-    assert result.exit_code == 0
+    with tempfile.TemporaryDirectory() as tmpdir:
+        result = runner.invoke(main, ["review", tmpdir])
+        assert result.exit_code == 0

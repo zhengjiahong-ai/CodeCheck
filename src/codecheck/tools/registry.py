@@ -83,3 +83,27 @@ class ToolRegistry:
                 success=False,
                 error=f"Tool '{name}' execution failed: {e}",
             )
+
+    def register_defaults(self) -> None:
+        """Register all default CodeCheck tools.
+
+        Registers the standard set of tools: read_file, write_file,
+        run_shell, run_test, run_lint, git_diff, git_log, git_blame.
+        """
+        from codecheck.tools.file_tools import ReadFileTool, WriteFileTool
+        from codecheck.tools.git_tools import GitBlameTool, GitDiffTool, GitLogTool
+        from codecheck.tools.shell_tools import RunLintTool, RunShellTool, RunTestTool
+
+        defaults: list[Tool] = [
+            ReadFileTool(),
+            WriteFileTool(),
+            RunShellTool(),
+            RunTestTool(),
+            RunLintTool(),
+            GitDiffTool(),
+            GitLogTool(),
+            GitBlameTool(),
+        ]
+        for tool in defaults:
+            if tool.name not in self._tools:
+                self.register(tool)

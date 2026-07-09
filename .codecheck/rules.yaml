@@ -5,14 +5,15 @@ rules:
   - id: "no-hardcoded-secret"
     severity: critical
     type: deterministic
-    pattern: '(api_key|secret|password|token)\s*=\s*[''"][^''""]+[''"]]'
+    pattern: '(api_key|secret|password|token)\s*=\s*[''"][^''""]+[''"]'
     message: "禁止硬编码密钥/密码/Token"
     category: security
 
   - id: "sql-string-concat"
     severity: critical
     type: deterministic
-    pattern: "('f'|['\"])\s*(SELECT|INSERT|UPDATE|DELETE)\s"
+    pattern: |-
+      ('f'|['"])\s*(SELECT|INSERT|UPDATE|DELETE)\s
     message: "检测到疑似 SQL 字符串拼接，可能导致 SQL 注入风险"
     category: security
 
