@@ -188,3 +188,5 @@ MIT — 详见 [LICENSE](LICENSE) 文件。
 ---
 
 基于 [Superpowers](https://github.com/obra/superpowers) 方法论构建：规范驱动、子代理开发、人类拥有。
+
+注：机制演示在tools文件夹里
