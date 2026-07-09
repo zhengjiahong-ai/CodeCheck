@@ -1,14 +1,13 @@
 """Review command — run code review with optional auto-fix."""
 
 import json
-import sys
 from pathlib import Path
 
 import click
 
-from codecheck.agent.loop import AgentLoop, ReviewReport
+from codecheck.agent.loop import AgentLoop
 from codecheck.config.loader import load_config
-from codecheck.credentials.store import CredentialStore, get_api_key
+from codecheck.credentials.store import get_api_key
 from codecheck.feedback.loop import FeedbackLoop
 from codecheck.llm.deepseek_provider import DeepSeekProvider
 from codecheck.llm.mock_provider import MockProvider
@@ -102,10 +101,9 @@ def _format_issues_for_terminal(issues: list[dict]) -> str:
 
 def _format_fix_report_for_terminal(fix_report) -> str:
     """Format a FixReport for terminal output."""
-    from codecheck.feedback.reporter import FixReport as FR
 
     lines = [
-        f"\nFix Report:",
+        "\nFix Report:",
         f"  Total issues: {fix_report.total_issues}",
         f"  Fixed: {click.style(str(fix_report.fixed), fg='green')}",
         f"  Needs manual: {click.style(str(fix_report.needs_manual), fg='yellow')}",

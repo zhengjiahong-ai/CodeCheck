@@ -133,7 +133,7 @@ def _set_key(store: CredentialStore) -> None:
             click.style(f"Error storing API key: {e}", fg="red"),
             err=True,
         )
-        raise SystemExit(1)
+        raise SystemExit(1) from e
 
 
 def _clear_key(store: CredentialStore) -> None:

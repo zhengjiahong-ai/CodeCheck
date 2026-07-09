@@ -70,10 +70,10 @@ def install_hook(force):
         click.echo("  CodeCheck will now run automatically before each commit.")
     except FileNotFoundError as e:
         click.echo(click.style(f"Error: {e}", fg="red"), err=True)
-        raise SystemExit(1)
+        raise SystemExit(1) from e
     except FileExistsError as e:
         click.echo(click.style(f"Error: {e}", fg="red"), err=True)
-        raise SystemExit(1)
+        raise SystemExit(1) from e
 
 
 @main.command()
@@ -83,6 +83,8 @@ def uninstall_hook():
 
     from codecheck.hooks.pre_commit import (
         is_hook_installed,
+    )
+    from codecheck.hooks.pre_commit import (
         uninstall_hook as do_uninstall,
     )
 
