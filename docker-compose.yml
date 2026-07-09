@@ -1,0 +1,26 @@
+# docker-compose.yml — simplified local usage of CodeCheck
+#
+# Usage:
+#   docker-compose build
+#   docker-compose run --rm codecheck review /workspace
+#   docker-compose run --rm codecheck --help
+
+version: "3.8"
+
+services:
+  codecheck:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: codecheck:latest
+    volumes:
+      # Mount the project code to /workspace
+      - .:/workspace
+      # Mount the credential store for API key persistence
+      - ~/.codecheck:/home/codecheck/.codecheck
+    environment:
+      # Alternatively, set your API key via environment variable
+      # (Note: this is less secure than the encrypted credential store)
+      # - CODE_CHECK_API_KEY=${CODE_CHECK_API_KEY}
+      - PYTHONUNBUFFERED=1
+    working_dir: /workspace

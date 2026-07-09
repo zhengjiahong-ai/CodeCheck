@@ -28,6 +28,9 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
+# CI/CD
+.github/
+
 # CodeCheck internal
 .codecheck/backups/
 .codecheck/memory.db
@@ -35,5 +38,16 @@ Thumbs.db
 .codecheck/credentials.enc
 .codecheck/logs/
 
+# Project docs & processes (not needed at runtime)
+.claude/
+tests/
+PLAN.md
+SPEC.md
+AGENT_LOG.md
+SPEC_PROCESS.md
+REFLECTION.md
+Makefile
+
 # Environment (contains secrets)
 .env
+*.enc
