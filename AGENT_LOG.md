@@ -163,3 +163,18 @@
 | **人工干预** | 修复 `test_empty_db_path_creates_default`：`Path.expanduser()` 不经过 `os.path.expanduser`，改用 `monkeypatch.setenv("HOME", ...)` |
 | **验证结果** | 194 passed, 5 skipped (11 new T8 tests) |
 | **Commit** | `53bd72c` |
+
+---
+
+## 2026-07-07 · T9: Agent 主循环
+
+| 字段 | 内容 |
+|------|------|
+| **时间** | 2026-07-07 |
+| **Task 编号** | T9 |
+| **触发技能** | 直接实现（使用 git worktree 隔离） |
+| **涉及文件** | `context.py` (ContextBuilder + 系统提示模板), `parser.py` (parse_review_report + 3种JSON提取), `loop.py` (AgentLoop + ReviewReport), `tests/agent/test_loop.py` (9 用例), `tests/agent/test_parser.py` (10 用例) |
+| **AI 输出** | 完整 Agent 主循环：上下文构建(工具+规则+输出格式) → LLM调用 → 护栏检查 → 工具执行 → 结果回灌 → 停机判断 |
+| **人工干预** | 无 — 一次通过，19/19 tests passed |
+| **验证结果** | 213 passed, 5 skipped (19 new T9 tests) |
+| **Commit** | `8de4a85` |
