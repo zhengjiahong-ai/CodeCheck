@@ -1,190 +1,190 @@
-# CodeCheck — AI-Powered Code Review Harness
+# CodeCheck — AI 驱动的代码审查 Harness
 
 [![CI](https://github.com/nju-ai4se/codecheck/actions/workflows/ci.yml/badge.svg)](https://github.com/nju-ai4se/codecheck/actions/workflows/ci.yml)
 
-**CodeCheck** is a coding agent harness that implements the core loop of an AI-powered code review system: **review → fix → verify → retry → converge**. It's built as a demonstration of the "Agent = LLM + Harness" principle — the LLM decides what to do, but the harness (governance, feedback, context, tool dispatch) is all deterministic, testable code.
+**CodeCheck** 是一个编码智能体（Coding Agent）Harness，实现了 AI 驱动代码审查系统的核心循环：**审查 → 修复 → 验证 → 回滚 → 重试 → 收敛**。它是对"Agent = LLM + Harness"原则的实践——LLM 决定做什么，但 Harness（治理、反馈、上下文、工具调度）全部是确定性的、可测试的代码。
 
-## What It Does
+## 功能概览
 
-- **Scans** source code with deterministic regex rules (hardcoded secrets, bare except, debug print, eval, SQL injection)
-- **Analyzes** code with LLM-assisted semantic rules (logic errors, unhandled errors, SQL injection risks)
-- **Auto-fixes** detected issues and verifies each fix by running tests and lint
-- **Rolls back** failed fixes and retries with failure context fed back to the LLM
-- **Blocks** dangerous operations with a code-based guardrail system
-- **Tracks** review history, false positives, and fix patterns across sessions
+- **扫描**源码，使用确定性正则规则检查（硬编码密钥、裸 except、调试 print、eval、SQL 注入等）
+- **分析**代码，使用 LLM 辅助的语义规则（逻辑错误、未处理异常、SQL 注入风险等）
+- **自动修复**检测到的问题，并通过运行测试和 lint 验证每次修复
+- **回滚**失败的修复，将失败上下文反馈给 LLM 后重试
+- **拦截**危险操作，使用基于代码的护栏系统
+- **追踪**跨会话的审查历史、误报记录和修复模式
 
-## Quick Start
+## 快速开始
 
-### 1. Install
+### 1. 安装
 
 ```bash
-# From source
+# 从源码安装
 git clone https://github.com/nju-ai4se/codecheck.git
 cd codecheck
 pip install -e ".[dev]"
 
-# Or via Docker
+# 或通过 Docker
 docker pull ghcr.io/nju-ai4se/codecheck:latest
 ```
 
-### 2. Configure API Key
+### 2. 配置 API Key
 
 ```bash
-# Interactive setup (recommended - encrypted storage)
+# 交互式配置（推荐 — 加密存储）
 codecheck config --set-key
 
-# Or via environment variable (less secure)
+# 或通过环境变量（安全性较低）
 export CODE_CHECK_API_KEY=sk-your-key-here
 ```
 
-### 3. Run a Review
+### 3. 运行审查
 
 ```bash
-# Review current directory
+# 审查当前目录
 codecheck review .
 
-# Review with auto-fix
+# 审查并自动修复
 codecheck review . --fix
 
-# Review specific file
+# 审查指定文件
 codecheck review src/main.py
 
-# Review only staged changes
+# 仅审查变更文件
 codecheck review --diff
 
-# Save report to JSON
+# 保存 JSON 报告
 codecheck review . --output report.json
 ```
 
-### 4. Install Git Hook
+### 4. 安装 Git Hook
 
 ```bash
-# Block commits with unfixed issues
+# 阻止提交含有未修复问题的代码
 codecheck install-hook
 
-# Remove the hook
+# 移除 Hook
 codecheck uninstall-hook
 ```
 
-## Docker Usage
+## Docker 使用
 
 ```bash
-# Build
+# 构建镜像
 docker build -t codecheck .
 
-# Run
+# 运行审查
 docker run -v $(pwd):/workspace -v ~/.codecheck:/root/.codecheck codecheck review /workspace
 
-# With docker-compose
+# 使用 docker-compose
 docker-compose run --rm codecheck review /workspace
 ```
 
-## Key Security Configuration
+## Key 安全配置
 
-CodeCheck talks to LLM APIs — it needs an API key. Here's how to keep it safe:
+CodeCheck 需要调用 LLM API，因此需要 API Key。以下是安全配置方式：
 
-| Method | Security | Notes |
-|--------|----------|-------|
-| `codecheck config --set-key` | **Best** | Encrypted with Fernet (AES-128-CBC + HMAC) + PBKDF2 master password. Key never leaves disk in plaintext. |
-| `CODE_CHECK_API_KEY` env var | **OK** | Plaintext in process environment. Use `.env` file (not `export`). Never commit `.env`. |
-| Hardcoded in source | **Never** | Will be rejected by deterministic rules. Never do this. |
+| 方式 | 安全性 | 说明 |
+|------|--------|------|
+| `codecheck config --set-key` | **最佳** | 使用 Fernet（AES-128-CBC + HMAC）+ PBKDF2 主密码加密。Key 不会以明文形式落盘。 |
+| `CODE_CHECK_API_KEY` 环境变量 | **可用** | 进程环境变量中为明文。建议使用 `.env` 文件而非 `export`。绝不要提交 `.env`。 |
+| 硬编码在源码中 | **禁止** | 会被确定性规则检测到。永远不要这样做。 |
 
-**Threat model**: An attacker with filesystem access to `~/.codecheck/credentials.enc` cannot decrypt the key without the master password. The master password is never stored. Environment variables are visible to any process running as the same user.
+**威胁模型**：攻击者即使获取了 `~/.codecheck/credentials.enc` 文件的访问权限，没有主密码也无法解密。主密码从不存储。环境变量对同一用户下的所有进程可见。
 
-## Project Structure
+## 项目结构
 
 ```
 codecheck/
 ├── src/codecheck/
-│   ├── agent/          # Agent main loop + context builder
-│   ├── cli/            # CLI commands (review, config, hooks)
-│   ├── config/         # .codecheck.yaml loader + schema
-│   ├── credentials/    # Encrypted API key storage
-│   ├── feedback/       # Fix → test → rollback → retry loop
-│   ├── guardrails/     # Deterministic action gate (HITL)
-│   ├── hooks/          # Git pre-commit hook integration
-│   ├── llm/            # LLM abstraction (DeepSeek + Mock)
-│   ├── memory/         # Review history + false positive tracking
-│   ├── rules/          # Deterministic + LLM-assisted rule engine
-│   └── tools/          # File, shell, git tools
-├── tests/              # 268 tests (all runnable without real LLM)
-├── .codecheck/         # Built-in rules (rules.yaml)
-├── Dockerfile          # Multi-stage Docker build
-├── docker-compose.yml  # Simplified local Docker usage
-└── .github/workflows/  # CI/CD (tests + lint + Docker build)
+│   ├── agent/          # Agent 主循环 + 上下文构建器
+│   ├── cli/            # CLI 命令（review、config、hooks）
+│   ├── config/         # .codecheck.yaml 加载器 + 模式定义
+│   ├── credentials/    # 加密 API Key 存储
+│   ├── feedback/       # 修复 → 测试 → 回滚 → 重试 循环
+│   ├── guardrails/     # 确定性操作护栏（HITL）
+│   ├── hooks/          # Git pre-commit hook 集成
+│   ├── llm/            # LLM 抽象层（DeepSeek + Mock）
+│   ├── memory/         # 审查历史 + 误报追踪
+│   ├── rules/          # 确定性 + LLM 辅助规则引擎
+│   └── tools/          # 文件、Shell、Git 工具
+├── tests/              # 268 个测试（全部可在无真实 LLM 下运行）
+├── .codecheck/         # 内置规则（rules.yaml）
+├── Dockerfile          # 多阶段 Docker 构建
+├── docker-compose.yml  # 简化本地 Docker 使用
+└── .github/workflows/  # CI/CD（测试 + lint + Docker 构建）
 ```
 
-## Architecture
+## 架构设计
 
-CodeCheck implements a full coding agent harness with six dimensions:
+CodeCheck 实现了完整的编码智能体 Harness，包含六个维度：
 
-| Dimension | Implementation | Deterministic? |
-|-----------|---------------|----------------|
-| **Decision** | Agent main loop: context → LLM → parse → dispatch → loop | Yes (loop logic is code) |
-| **Tools** | Read/write files, run shell, git operations, test/lint runners | Yes (all tools are code) |
-| **Memory** | SQLite for review history, false positive tracking | Yes (storage is code) |
-| **Governance** | Permission matrix + HITL confirmation for dangerous ops | Yes (guardrail is code) |
-| **Feedback** | Fix → test → rollback → retry → converge loop | Yes (loop is code) |
-| **Configuration** | `.codecheck.yaml` with rules, exclusions, test commands | Yes (parsing is code) |
+| 维度 | 实现方式 | 是否确定性？ |
+|------|----------|-------------|
+| **决策** | Agent 主循环：上下文→LLM→解析→调度→循环 | 是（循环逻辑是代码） |
+| **工具** | 读写文件、执行 Shell、Git 操作、测试/lint 运行器 | 是（所有工具是代码） |
+| **记忆** | SQLite 存储审查历史、误报追踪 | 是（存储是代码） |
+| **治理** | 权限矩阵 + 危险操作人工确认（HITL） | 是（护栏是代码） |
+| **反馈** | 修复→测试→回滚→重试→收敛 循环 | 是（循环是代码） |
+| **配置** | `.codecheck.yaml` 配置规则、排除项、测试命令 | 是（解析是代码） |
 
-**The "deep dimension"** is the feedback loop — it's not just a prompt telling the LLM to "fix it", but deterministic code that:
-1. Backs up the file before each fix attempt
-2. Applies the fix, runs tests and lint
-3. If either fails, restores the backup and feeds the failure output back to the LLM
-4. Repeats up to `max_fix_rounds` times
-5. Marks issues as "needs manual" if all rounds fail
+**"深度维度"** 是反馈闭环——它不仅仅是提示 LLM "修复它"，而是确定性的代码，能够：
+1. 在每次修复尝试前备份文件
+2. 应用修复，运行测试和 lint
+3. 如果任一失败，恢复备份并将失败输出反馈给 LLM
+4. 最多重复 `max_fix_rounds` 次
+5. 所有轮次都失败后标记为"需人工处理"
 
-## Development
+## 开发指南
 
 ```bash
-# Install dev dependencies
+# 安装开发依赖
 pip install -e ".[dev]"
 
-# Run tests
+# 运行测试
 make test
-# or: pytest --tb=short -v
+# 或: pytest --tb=short -v
 
-# Run lint
+# 运行 lint
 make lint
-# or: ruff check src/ tests/
+# 或: ruff check src/ tests/
 
-# Run a specific test
+# 运行特定测试
 pytest tests/cli/test_review.py -v
 ```
 
-## Testing Philosophy
+## 测试理念
 
-- **268 tests** pass without any network or real LLM
-- All core mechanisms (guardrails, feedback loop, tool dispatch, memory) are tested with mock LLMs
-- 16 hook tests, 17 CLI tests, 10 config tests, plus agent, rules, tools, feedback, guardrails, and memory tests
-- CI runs on Python 3.10 and 3.12
-- Only 5 tests require `CODE_CHECK_TEST_LIVE=1` (DeepSeek integration)
+- **268 个测试**无需网络或真实 LLM 即可通过
+- 所有核心机制（护栏、反馈闭环、工具调度、记忆）均使用 mock LLM 测试
+- 16 个 Hook 测试、17 个 CLI 测试、10 个配置测试，以及 Agent、规则、工具、反馈、护栏、记忆等模块测试
+- CI 在 Python 3.10 和 3.12 上运行
+- 仅 5 个测试需要 `CODE_CHECK_TEST_LIVE=1`（DeepSeek 集成测试）
 
-## Known Limitations
+## 已知限制
 
-- **Platform**: Linux/macOS primary. Windows support via Docker.
-- **LLM Provider**: DeepSeek API by default. OpenAI-compatible providers work via config.
-- **File types**: Python, JavaScript, TypeScript, Java, Go, Rust, C/C++.
-- **Fix verification**: Requires the project to have a test command configured (defaults to `pytest`).
-- **No real sandboxing**: Shell commands run with the user's permissions. The guardrail is a gate, not a container.
-- **Memory**: SQLite-based. ChromaDB vector search is planned but not yet implemented.
+- **平台**：Linux/macOS 为主。Windows 可通过 Docker 使用。
+- **LLM 提供商**：默认使用 DeepSeek API。OpenAI 兼容的提供商可通过配置使用。
+- **文件类型**：Python、JavaScript、TypeScript、Java、Go、Rust、C/C++。
+- **修复验证**：需要项目配置测试命令（默认为 `pytest`）。
+- **无真正沙箱**：Shell 命令以用户权限运行。护栏是门禁，不是容器。
+- **记忆系统**：基于 SQLite。ChromaDB 向量搜索已规划但尚未实现。
 
-## Security Boundaries
+## 安全边界
 
-CodeCheck is designed to run on your development machine. It:
+CodeCheck 设计为在开发机器上运行。它：
 
-- **Does NOT** send your code to any external service without your API key
-- **Does NOT** store your API key in plaintext on disk
-- **Does NOT** execute shell commands without guardrail checks
-- **Does** allow you to review and confirm dangerous operations (HITL)
-- **Does** run your test suite as configured — tests have full access to your system
+- **不会**在未配置 API Key 的情况下将代码发送到任何外部服务
+- **不会**以明文形式将 API Key 存储在磁盘上
+- **不会**在未经护栏检查的情况下执行 Shell 命令
+- **会**允许你审查和确认危险操作（HITL）
+- **会**按配置运行你的测试套件——测试拥有对你系统的完全访问权限
 
-**Never commit your API key or `.env` file**. The built-in `no-hardcoded-secret` rule will catch obvious leaks, but it's not a substitute for good security hygiene.
+**绝不要提交你的 API Key 或 `.env` 文件**。内置的 `no-hardcoded-secret` 规则能捕获明显的泄露，但不能替代良好的安全习惯。
 
-## License
+## 许可证
 
-MIT — see [LICENSE](LICENSE) file.
+MIT — 详见 [LICENSE](LICENSE) 文件。
 
 ---
 
-Built with [Superpowers](https://github.com/obra/superpowers) methodology: spec-driven, subagent-built, human-owned.
+基于 [Superpowers](https://github.com/obra/superpowers) 方法论构建：规范驱动、子代理开发、人类拥有。
