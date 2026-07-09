@@ -178,3 +178,18 @@
 | **人工干预** | 无 — 一次通过，19/19 tests passed |
 | **验证结果** | 213 passed, 5 skipped (19 new T9 tests) |
 | **Commit** | `8de4a85` |
+
+---
+
+## 2026-07-07 · T10: 反馈闭环
+
+| 字段 | 内容 |
+|------|------|
+| **时间** | 2026-07-07 |
+| **Task 编号** | T10 |
+| **触发技能** | 直接实现（使用 git worktree 隔离） |
+| **涉及文件** | `backup.py` (backup/restore + metadata), `verifier.py` (run_tests/run_lint), `reporter.py` (FixReport/FixAttempt/SingleFixResult), `loop.py` (FeedbackLoop + FIX_PROMPT + _parse_fix_response), 3 个测试文件 |
+| **AI 输出** | 完整反馈闭环：修复生成→备份→应用→测试验证→回滚→重试→收敛，LLM只用于修复生成，其余均为确定性代码 |
+| **人工干预** | 1) 修复 `workspace_root` 未使用变量；2) 修复 `test_multiple_issues_processed`：多个 issue 需要不同的 MockRule (不同 old_string)，第一个 consume 第二个 not |
+| **验证结果** | 235 passed, 5 skipped (22 new T10 tests) |
+| **Commit** | `b554bad` |
