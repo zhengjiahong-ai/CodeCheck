@@ -193,3 +193,51 @@
 | **人工干预** | 1) 修复 `workspace_root` 未使用变量；2) 修复 `test_multiple_issues_processed`：多个 issue 需要不同的 MockRule (不同 old_string)，第一个 consume 第二个 not |
 | **验证结果** | 235 passed, 5 skipped (22 new T10 tests) |
 | **Commit** | `b554bad` |
+
+---
+
+## 2026-07-09 · T11: CLI 入口
+
+| 字段 | 内容 |
+|------|------|
+| **时间** | 2026-07-09 |
+| **Task 编号** | T11 |
+| **触发技能** | 直接实现（使用 git worktree 隔离） |
+| **涉及文件** | `src/codecheck/cli/review.py` (review 命令实现), `src/codecheck/cli/config_cmd.py` (config 命令实现), `src/codecheck/cli/main.py` (连线), `src/codecheck/tools/registry.py` (register_defaults), `tests/cli/test_review.py` (7 用例), `tests/cli/test_config.py` (10 用例), `.codecheck/rules.yaml` (修复 YAML 转义) |
+| **AI 输出** | 完整 CLI 实现：review 命令（文件扫描→规则引擎→Agent 主循环→反馈闭环→JSON 输出），config 命令（status/set-key/clear-key），终端彩色输出，退出码规范 |
+| **人工干预** | 1) 修复 YAML 转义问题：`rules.yaml` 中 `\s` 在 YAML 双引号字符串中为非法转义序列，改用 `|-` 块标量写法；2) 修复 config_cmd.py 架构：原为 Click 命令装饰器，但被 main.py 作为普通函数调用导致 TypeError，改为纯函数；3) 修复 test_cli_smoke.py 中 `test_review_empty_dir` 测试：review 命令现在实际扫描文件，传入 `.` 会扫描项目自身源码发现 issues 导致 exit code 1，改为使用临时空目录 |
+| **验证结果** | 268 passed, 5 skipped (17 new CLI tests) |
+| **Commit** | `d2378b0` |
+| **教训** | 1) YAML 双引号字符串中 `\s` 等正则转义需写为 `\\s` 或改用单引号/块标量；2) Click 命令装饰器与普通函数不能混用——如果函数需要被其他 Click 命令调用，应去掉装饰器，由调用方传递参数 |
+
+---
+
+## 2026-07-09 · T12: Git Hook 集成
+
+| 字段 | 内容 |
+|------|------|
+| **时间** | 2026-07-09 |
+| **Task 编号** | T12 |
+| **触发技能** | 直接实现（使用 git worktree 隔离） |
+| **涉及文件** | `src/codecheck/hooks/pre_commit.py` (hook 安装/卸载/版本检测), `src/codecheck/hooks/__init__.py`, `src/codecheck/cli/main.py` (连线), `tests/hooks/test_pre_commit.py` (16 用例) |
+| **AI 输出** | 完整 Git Hook 集成：可执行 hook 脚本生成（含版本标记）、install/uninstall、--force 覆盖、安全检查（只移除自家 hook）、退出码区分 |
+| **人工干预** | 1) 修复 `get_hook_path`：当 `repo_root` 参数传入时，函数直接构造 `.git/hooks/pre-commit` 路径但未检查 `.git` 是否存在，导致 `test_get_hook_path_not_in_repo` 测试失败（未抛出 FileNotFoundError）。修复：添加 `git_dir.exists()` 显式检查；2) 修复 worktree 嵌套问题：T12 worktree 最初在 T11 worktree 内部创建，导致路径混乱，删除后从 main 分支重新创建 |
+| **验证结果** | 268 passed, 5 skipped (16 new hook tests) |
+| **Commit** | `037c321` |
+| **教训** | 1) `git worktree add` 要注意当前所在目录——在 worktree 内执行会在嵌套路径创建；2) Hook 脚本必须标记自身身份（如 `# CodeCheck pre-commit hook`），否则卸载时无法区分自家 hook 和用户自定义 hook |
+
+---
+
+## 2026-07-09 · T13, T14, T15: Docker 分发, CI/CD, README
+
+| 字段 | 内容 |
+|------|------|
+| **时间** | 2026-07-09 |
+| **Task 编号** | T13, T14, T15 |
+| **触发技能** | 直接实现（合并 T11/T12 到 main 后直接修改） |
+| **涉及文件** | `Dockerfile` (多阶段构建), `.dockerignore` (更新), `docker-compose.yml` (新增), `.github/workflows/ci.yml` (多 Python 版本矩阵), `README.md` (完整重写) |
+| **AI 输出** | T13: 多阶段 Docker 构建（builder→runtime），非 root 用户运行，docker-compose 简化本地使用；T14: CI 增加 Python 3.10/3.12 矩阵测试、测试报告 artifacts 上传、Docker 内运行 review 冒烟测试；T15: 完整 README（简介/安装/运行/安全配置/架构/安全边界/已知限制/CI 徽章） |
+| **人工干预** | 无 — 一次通过 |
+| **验证结果** | 268 passed, 5 skipped, 所有 CLI 命令正常 |
+| **Commit** | `ad8f815` (T13-T15), `020961d` (PLAN.md 更新) |
+| **教训** | T13-T15 无代码依赖，合入 main 后直接修改效率更高，无需 worktree 隔离 |
