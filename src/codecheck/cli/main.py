@@ -52,18 +52,47 @@ def config(status, set_key, clear_key):
 
 
 @main.command()
-def install_hook():
+@click.option("--force", is_flag=True, help="Overwrite existing hook even if not CodeCheck's")
+def install_hook(force):
     """Install git pre-commit hook.
 
     Installs a pre-commit hook that runs CodeCheck on staged changes
-    before each commit.
+    before each commit. The hook will block commits with issues that
+    cannot be auto-fixed.
     """
-    # T12 实现
-    pass
+    import click
+
+    from codecheck.hooks.pre_commit import install_hook as do_install
+
+    try:
+        path = do_install(force=force)
+        click.echo(click.style(f"✓ Pre-commit hook installed at: {path}", fg="green"))
+        click.echo("  CodeCheck will now run automatically before each commit.")
+    except FileNotFoundError as e:
+        click.echo(click.style(f"Error: {e}", fg="red"), err=True)
+        raise SystemExit(1)
+    except FileExistsError as e:
+        click.echo(click.style(f"Error: {e}", fg="red"), err=True)
+        raise SystemExit(1)
 
 
 @main.command()
 def uninstall_hook():
     """Remove git pre-commit hook installed by CodeCheck."""
-    # T12 实现
-    pass
+    import click
+
+    from codecheck.hooks.pre_commit import (
+        is_hook_installed,
+        uninstall_hook as do_uninstall,
+    )
+
+    if not is_hook_installed():
+        click.echo(click.style("No CodeCheck pre-commit hook is installed.", fg="yellow"))
+        return
+
+    removed = do_uninstall()
+    if removed:
+        click.echo(click.style("✓ Pre-commit hook removed.", fg="green"))
+    else:
+        click.echo(click.style("Error: Failed to remove hook.", fg="red"), err=True)
+        raise SystemExit(1)
