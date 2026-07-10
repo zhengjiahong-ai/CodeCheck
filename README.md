@@ -24,7 +24,7 @@ cd codecheck
 pip install -e ".[dev]"
 
 # 或通过 Docker
-docker pull ghcr.io/nju-ai4se/codecheck:latest
+docker pull ghcr.io/zhengjiahong-ai/codecheck:latest
 ```
 
 ### 2. 配置 API Key
