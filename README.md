@@ -1,6 +1,6 @@
 # CodeCheck — AI 驱动的代码审查 Harness
 
-[![CI](https://github.com/nju-ai4se/codecheck/actions/workflows/ci.yml/badge.svg)](https://github.com/nju-ai4se/codecheck/actions/workflows/ci.yml)
+[![CI](https://github.com/zhengjiahong-ai/codecheck/actions/workflows/ci.yml/badge.svg)](https://github.com/zhengjiahong-ai/codecheck/actions/workflows/ci.yml)
 
 **CodeCheck** 是一个编码智能体（Coding Agent）Harness，实现了 AI 驱动代码审查系统的核心循环：**审查 → 修复 → 验证 → 回滚 → 重试 → 收敛**。它是对"Agent = LLM + Harness"原则的实践——LLM 决定做什么，但 Harness（治理、反馈、上下文、工具调度）全部是确定性的、可测试的代码。
 
@@ -19,7 +19,7 @@
 
 ```bash
 # 从源码安装
-git clone https://github.com/nju-ai4se/codecheck.git
+git clone https://github.com/zhengjiahong-ai/codecheck.git
 cd codecheck
 pip install -e ".[dev]"
 
